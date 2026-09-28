@@ -12,15 +12,25 @@ source:
 build:
   number: 1
   script:
-    - go-licenses save ./cmd/umoci --save_path=library_licenses
-    # upstream ref: https://github.com/opencontainers/umoci/blob/main/Makefile
-    - make docs
-    - COMMIT_HASH="$(curl -s "https://api.github.com/repos/opencontainers/umoci/commits/v${{ version }}" | jq -r '.sha')"
-    - go build -o="$PREFIX"/bin/umoci -v -buildmode=pie -ldflags="-s -w -X github.com/opencontainers/umoci.gitCommit=${COMMIT_HASH}" -trimpath ./cmd/umoci
-    # generate man pages
-    - mkdir -p "$PREFIX"/share/man/man1
-    - cp doc/man/*.1 "$PREFIX"/share/man/man1/
-  skip: win # cf. https://github.com/opencontainers/umoci/issues/607 
+    interpreter: nu
+    content:
+      - let prefix = $env.LIBRARY_PREFIX? | default $env.PREFIX
+      # build main app and generate license data
+      # upstream ref: https://github.com/opencontainers/umoci/blob/main/Makefile
+      - ^make docs
+      - let commit_hash = (http get https://api.github.com/repos/opencontainers/umoci/commits/v${{ version }}).sha
+      - ^go build
+        -o=($prefix)/bin/
+        -v
+        -buildmode=pie
+        -ldflags=$'-s -w -X github.com/opencontainers/umoci.gitCommit=($commit_hash)'
+        -trimpath
+        ./cmd/umoci
+      - ^go-licenses save ./cmd/umoci --save_path=library_licenses
+      # copy man pages
+      - mkdir ($prefix)/share/man/man1
+      - cp doc/man/*.1 ($prefix)/share/man/man1/
+  skip: win # cf. https://github.com/opencontainers/umoci/issues/607
 
 requirements:
   build:
@@ -28,6 +38,7 @@ requirements:
     - go-licenses
     - go-md2man
     - make
+    - nushell
 
 tests:
   - script:
