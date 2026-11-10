@@ -22,9 +22,7 @@ build:
       - ^go build
         -o=($prefix)/bin/
         -v
-        -buildmode=pie
         -ldflags=$'-s -w -X github.com/opencontainers/umoci.gitCommit=($commit_hash)'
-        -trimpath
         ./cmd/umoci
       - ^go-licenses save ./cmd/umoci --save_path=library_licenses
       # copy man pages
